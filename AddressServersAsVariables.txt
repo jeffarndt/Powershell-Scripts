@@ -1,0 +1,16 @@
+set version=HSWeb_PRD_830-20
+ 
+
+ 
+
+FOR /L %%i IN (101,1,110) DO (
+  ECHO %%i
+start chrome /newtab http://trh-ephsw%%i.trhmc.org/%version%/Health/
+)  
+
+ 
+
+
+FOR /L %%i IN (201,1,210) DO (
+  ECHO %%i
+start chrome /newtab http://trh-ephsw%%i.trhmc.org/%version%/Health/

@@ -1,0 +1,37 @@
+Shutdown.exe /r /f /t 5 /m \\TRH-EPCCAREW01
+
+Shutdown.exe /r /f /t 110 /m \\TRH-EPCCAREW02
+
+Shutdown.exe /r /f /t 5 /m \\TRH-EPCINC01
+
+Shutdown.exe /r /f /t 110 /m \\TRH-EPCINC02
+
+Shutdown.exe /r /f /t 5 /m \\TRH-EPCINFG101
+
+Shutdown.exe /r /f /t 110 /m \\TRH-EPCINFG201
+
+Shutdown.exe /r /f /t 5 /m \\TRH-EPCIN3M101
+
+Shutdown.exe /r /f /t 110 /m \\TRH-EPCIN3M201
+
+Shutdown.exe /r /f /t 5 /m \\TRH-EPCCLINK101 
+
+Shutdown.exe /r /f /t 110 /m \\TRH-EPCCLINK201 
+
+PING localhost -n 70 >NUL
+
+systeminfo /s TRH-EPCCAREW01 | find "System Boot Time:"
+systeminfo /s TRH-EPCINC01 | find "System Boot Time:"
+systeminfo /s TRH-EPCINFG101 | find "System Boot Time:"
+systeminfo /s TRH-EPCIN3M101 | find "System Boot Time:"
+systeminfo /s TRH-EPCCLINK101 | find "System Boot Time:"
+
+PING localhost -n 95 >NUL
+
+systeminfo /s TRH-EPCCAREW02 | find "System Boot Time:"
+systeminfo /s TRH-EPCINC02 | find "System Boot Time:"
+systeminfo /s TRH-EPCINFG201 | find "System Boot Time:"
+systeminfo /s TRH-EPCIN3M201 | find "System Boot Time:"
+systeminfo /s TRH-EPCCLINK101 | find "System Boot Time:"
+
+pause
