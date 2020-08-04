@@ -1,0 +1,132 @@
+Import AD shell into Exchange shell > Import-Module ActiveDirectory
+Add exchange commands to shell > Add-PSSnapin Microsoft.Exchange.Management.PowerShell.E2010
+
+CREATE NEW REMOTE MAIL USER
+#Creates remote mailbox. Run in Exchange shell
+Enable-remotemailbox -identity $first.$last@cityREDACTED.co.nz -remoteroutingaddress $first.$last@cityREDACTEDgroup.mail.onmicrosoft.com
+
+USEFUL EXPORTS FOR REPORTING
+#Fastest export for members of an AD group
+Get-ADUser -filter {(memberOf -eq "CN=OutlookSignature_CCG_REDACTED,OU=CityREDACTEDUsers,DC=cityREDACTED,DC=local") -AND (enabled -eq $true)} | Select name, givenname, surname, userPrincipalName | Export-Csv \\CC74321\C$\Temp\REDACTED.CSV
+#Online powershell, fastest export for DLs
+Get-distributiongroupmember "DL Payslip Attachments 1" | Select name, firstname, lastname, primarysmtpaddress | export-csv \\cc74321\c$\temp\DL1.csv
+#Accurate export for all active user accounts. Filter by OU (OU=City REDACTED Users,OU=City REDACTED,DC=cityREDACTED,DC=local) if you want only staff.
+Get-ADUser -filter {enabled -eq $true} -properties * | select name,emailaddress,description | export-csv \\cc74321\c$\temp\ADUsers.CSV
+
+EXPORT A LIST OF USERS IN MORE THAN ONE GROUP
+#Specify groups
+#$GroupA = "CN=MFA_Office,OU=Azure Groups,OU=City REDACTED Groups,OU=City REDACTED,DC=cityREDACTED,DC=local"
+$GroupA = "CN=MFA_Fieldstaff,OU=Azure Groups,OU=City REDACTED Groups,OU=City REDACTED,DC=cityREDACTED,DC=local"
+$GroupB = "CN=OutlookSignature_CCG_REDACTED,OU=CityREDACTEDUsers,DC=cityREDACTED,DC=local"
+#Export all users that are members of both groups
+Get-ADUser -filter {(memberOf -eq $GroupA) -And (memberOf -eq $GroupB)} | Select name, givenname, surname, userPrincipalName | Export-Csv \\CC74321\C$\Temp\REDACTEDFieldStaff.CSV
+
+OTHER MISC EXPORTS
+get-adgroupmember allccusers | find OU="Pages Road"
+Get-ADGroupMember -Identity <groupname> | Get-ADUser -properties * | select name,samaccountname,emailaddress | export-csv \\CC74321\C$\Temp\Group.csv
+Get-ADGroupMember "Reportcentralexcelfinance" | select name | export-csv \\CC74321\C$\Temp\Reportexcelfinance.csv
+Get-ADUser -filter {enabled -eq $true} | where DistinguishedName -notlike "*field staff*" | export-csv \\cc70080\c$\temp\ADUsers.CSV
+Get-ADUser -searchbase "OU=Standard Users,OU=City REDACTED Users,OU=City REDACTED,DC=cityREDACTED,DC=local" -filter 'description -notlike "*"' -properties * | select name,emailaddress,description | export-csv \\cc74321\c$\temp\ADUsers.CSV
+Get-ADUser -filter {name -eq "Arne Burgess"} -properties lastlogondate
+
+$Date = (Get-Date).AddDays(-90)
+Get-ADUser -Filter {PasswordLastSet -LT $Date} -Properties PasswordLastSet -SearchBase "OU=Standard Users,OU=City REDACTED Users,OU=City REDACTED,DC=cityREDACTED,DC=local" | Export-CSV \\CC74321\C$\Temp\PasswordsExpired.CSV
+
+Get-Mailbox | fl
+Get-Mailbox | ?{$_.ExchangeUserAccountControl -eq 'AccountDisabled'} | Get-MailboxAutoReplyConfiguration | select identity,autoreplystate
+#This single-line command will export to CSV a list of any mailboxes where other users have permissions to access them, and will also list what level of access those users have.
+Get-Mailbox | Get-MailboxPermission | where {$_.user.tostring() -ne "NT AUTHORITY\SELF" -and $_.IsInherited -eq $false} | Select Identity,User,@{Name='Access Rights';Expression={[string]::join(', ', $_.AccessRights)}} | Export-Csv -NoTypeInformation mailboxpermissions.csv
+Get-User -RecipientTypeDetails RemoteUserMailbox -ResultSize Unlimited | where {$_.UseraccountControl -notlike "*accountdisabled*"} | Select-Object DisplayName,WindowsEmailAddress | export-csv \\cc70080\c$\temp\allemailaccounts.csv
+Set-MailContact "Lemon King" -emailaddresspolicyenabled $false
+Set-mailbox -identity First.last@cityREDACTED.co.nz -type regular
+
+Import-CSV \\cc70080\c$\temp\webstandard.csv | ForEach {Add-ADGroupMember -Identity "WebFilter_StandardUsers" -members $_.samAccountname}
+
+netstat -na | Find "10.10.253.6"
+
+MAILBOX PERMISSION
+Connect-EXOPSSession
+Add-MailboxPermission -identity first.last@cityREDACTED.co.nz -user Lemon.king@cityREDACTED.co.nz -accessrights fullaccess -inheritancetype all
+#additional commands
+Add-RecipientPermission -Identity first.last@cityREDACTED.co.nz -Trustee Lemon.king@cityREDACTED.co.nz -AccessRights SendAs
+Remove-MailboxPermission -identity first.last@cityREDACTED.co.nz -user Lemon.king@cityREDACTED.co.nz
+Get-Mailboxpermission -identity first.last@cityREDACTED.co.nz
+Get-MailboxFolderPermission -identity first.last@cityREDACTED.co.nz:\calendar
+Add-MailboxFolderPermission -identity first.last@cityREDACTED.co.nz:\Calendar -user "Default" -AccessRights Editor
+Set-MailboxFolderPermission -identity Lemon.king@cityREDACTED.co.nz:\Calendar -user "Lemon King" -AccessRights [AvailabilityOnly,LimitedDetails,Editor]
+Set-Mailbox first.last@cityREDACTED.co.nz -DeliverToMailboxAndForward $true -ForwardingAddress first.last@cityREDACTED.co.nz
+
+CREATE SHARED MAILBOX
+Enable-Mailbox -Identity $first.$last@cityREDACTED.co.nz -Shared -Database DB01
+
+CHANGE MAILBOX TYPE
+Set-Mailbox Dev.Testing@cityREDACTED.co.nz -Type [Regular,Room,Shared]
+
+UPDATE UPN in MSOL
+Connect-MSOLService
+Set-MsolUserPrincipalName -UserPrincipalName $Old.$Name@cityREDACTED.co.nz -NewUserPrincipalName $New.$Name@cityREDACTED.co.nz
+
+BULK IMPORT SCRIPT (PAYSLIP)
+$Table = Import-Csv C:\Temp\Lemon\PayslipImport.csv
+$Table | %{New-MailContact -Name $_.Name -DisplayName $_.Name -ExternalEmailAddress $_.ExternalEmailAddress -FirstName $_.First -LastName $_.Last -OrganizationalUnit 'cityREDACTED.local/CityREDACTEDEmployees NON COMPUTER USERS'}
+$Table | %{Set-MailContact -Identity $_.Name -hiddenfromaddresslistsenabled $true -emailaddresspolicyenabled $false}
+
+BULK IMPORT USERS TO GROUP
+$Table = Import-CSV \\CC74321\C$\Temp\GroupUsers.csv
+$Table | %{Add-ADGroupMember -Identity GROUP -Members $Table.SAMAccountName}
+
+COPY GROUPS FROM ONE USER TO ANOTHER
+$templateuser = read-host 'Template user'
+$newuser = read-host 'New user'
+$CopyFromUser = Get-ADUser $templateuser -prop MemberOf
+$CopyToUser = Get-ADUser $newuser -prop MemberOf
+$CopyFromUser.MemberOf | Where{$CopyToUser.MemberOf -notcontains $_} |  Add-ADGroupMember -Members $CopyToUser
+
+MESSAGE TRACE
+Exchange online powershell
+Get-MessageTrace -SenderAddress "$first.$last@domain.com" -StartDate 06/13/2019 -EndDate 06/15/2019 | FL > \\cc74321\c$\temp\report.csv
+Note: date is american format, MM/dd/YYYY
+
+ROBYCOPY FROM BACKUP
+subst X: "\\cityREDACTED.local\DivisionDrives\National Maintenance\@GMT-2018.04.30-19.00.09\Underground\Users\"
+robocopy X: "\\cityREDACTED.local\DivisionDrives\National Maintenance\Underground\Users\" /E
+ONCE DONE
+subst X: /D
+
+USER EXPIRED.CMD
+@Echo off
+:START
+echo username please:
+set /p username=
+net user %username% /domain | find "Password"
+if (%username%)==(end) goto END
+goto START
+:END
+Pause
+
+
+MAK Key activation: slmgr.vbs /ipk <MultipleActivationKey>
+Re-check KMS activation: slmgr -rearm
+
+RESET LOCAL ACCOUNT PASSWORD (elevated command prompt)
+net user administrator password
+
+SET OUT OF OFFICE
+#Format is mm/dd/yyyy and NZ is +13 hours
+Set-MailboxAutoReplyConfiguration -Identity tony@cityREDACTED.co.nz -AutoReplyState Enabled -startdate "mm/dd/yyyy 1:00 AM" -enddate "mm/dd/yyyy 5:00 PM"
+#HTML Format for message
+$reply = "<p>Hello, Thank you for your email.</p><p>I am out of the office today (Friday 06/12/2019), and unable to respond to or action emails. <br /> Should the request be urgent, please call the main line, 0800 000 000.</p><p>Otherwise, I will respond to your email on Monday.</p><p>Many thanks,<br />Username</p>"
+Set-MailboxAutoReplyConfiguration -identity chchairport@cityREDACTED.co.nz -InternalMessage $reply -ExternalMessage $reply
+
+EMPLOYEE CODE CHECK v1
+Import-Module ActiveDirectory
+Get-ADUser -searchbase "OU=Standard Users,OU=City REDACTED Users,OU=City REDACTED,DC=cityREDACTED,DC=local" -filter 'description -notlike "*"' -properties * | select name,emailaddress,description | export-csv \\CCMGT05\c$\temp\EmployeeCodeCheck.CSV
+#sends email
+Send-MailMessage -From ccmgt05@cityREDACTED.co.nz -To Lemon.king@cityREDACTED.co.nz -Subject EmployeeCodeCheck -body "This week's Employee Code Check has been exported to \\CCMGT05\C$\Temp" -SmtpServer smtprelay.cityREDACTED.local
+#opens the csv in notepad
+Invoke-Item C:\Temp\EmployeeCodeCheck.CSV
+
+SKYPE HOLIDAY SETS
+$a = New-CsRgsHoliday -Name REDACTEDCentralAdminXMas2019 -StartDate "12/20/2019 12:00 PM" -EndDate "01/06/2020 7:30 AM" 
+New-CsRgsHolidaySet -Parent "ApplicationServer:ccchcsfb01.cityREDACTED.local" -Name "2019 Holidays" -HolidayList ($a)
+#note the date format is American (MM/dd/YYYY)

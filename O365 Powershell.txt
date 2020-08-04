@@ -1,0 +1,177 @@
+#####office 365 Powershell connect
+
+$UserCredential = Get-Credential
+$Session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri https://outlook.office365.com/powershell-liveid/ -Credential $UserCredential -Authentication Basic -AllowRedirection
+Import-PSSession $Session
+Connect-MsolService –Credential $LiveCred
+
+***************
+
+Install-Module MSOnline (if needed)
+
+#####Disconnect Session
+
+Get-PSSession | Where-Object {$_.ConfigurationName -eq “Microsoft.Exchange”} | Remove-PSSession
+_______________________________________________________
+
+####get sizes of public folders
+
+Get-PublicFolderStatistics | Select-Object Name,FolderPath, TotalItemSize | Out-Gridview
+_______________________________________________________
+######See mailbox stats/info (size) for all users:
+
+Get-Mailbox | Get-MailboxStatistics | Select-Object DisplayName, IsArchiveMailbox, TotalItemSize, ItemCount
+______________________________________________________
+######See who has full access on a mailbox:
+
+Get-MailboxPermission <UserPrincipalName>
+_______________________________________________________
+####see all users who have full access to any mailboxes:
+
+Get-Mailbox | Get-MailboxPermission | where {$_.user.tostring() -ne "NT AUTHORITY\SELF" -and $_.IsInherited -eq $false} 
+_______________________________________________________
+
+########## Bulk edit users pw's (export, add the PW's in the column, save, then import)
+Get-User | select UserPrincipalName,Displayname,password | Export-Csv -Path C:\Users\support\Documents\spreadsheet.csv -NoTypeInformation
+ 
+Import-csv C:\Users\support\Documents\peach.csv | foreach {Set-MsolUserPassword -UserPrincipalName $_.userprincipalname -NewPassword $_.password -ForceChangePassword:$False }
+
+_______________________________________________________
+########## Bulk create new users (export csv, fill in upn,displayname,password, then import)
+ 
+Get-User | select userprincipalname,displayname,password | Export-Csv -Path C:\Users\support\Documents\spreadsheet.csv -NoTypeInformation
+ 
+Import-csv C:\Users\support\Documents\spreadsheet.csv | foreach { New-MsolUser -DisplayName $_.displayname -UserPrincipalName $_.userprincipalname -Password $_.password }
+_______________________________________________________
+###### Bulk set UsageLocation:
+
+Get-User | select userprincipalname,displayname,UsageLocation | Export-Csv -Path C:\Users\support\Documents\spreadsheet.csv -NoTypeInformation
+ 
+Import-csv C:\Users\support\Documents\spreadsheet.csv | foreach { Set-MsolUser -UserPrincipalName $_.userprincipalname -UsageLocation $_.UsageLocation }
+
+###check usage location
+get-msoluser | select userprincipalname,displayname,usagelocation | select-string genie365.onmicrosoft.com
+
+_______________________________________________________
+###### Bulk assign licenses
+Get-User | select userprincipalname,displayname,UsageLocation,AccountSkuId | Export-Csv -Path C:\Users\support\Documents\spreadsheet.csv -NoTypeInformation
+
+Paste these into the CSV for $_.AccountSkuId
+
+reseller-account:ENTERPRISEPACK
+reseller-account:FLOW_FREE
+reseller-account:O365_BUSINESS_PREMIUM
+reseller-account:POWER_BI_STANDARD
+reseller-account:O365_BUSINESS_ESSENTIALS
+
+Then import it to bulk assign licenses
+
+Import-csv C:\Users\support\Documents\spreadsheet.csv | foreach { Set-MsolUserLicense -UserPrincipalName $_.userprincipalname -AddLicenses $_.AccountSkuId }
+
+
+_______________________________________________________
+##### add 1 license
+Set-MsolUserLicense -UserPrincipalName markku.orispaa@genie365.onmicrosoft.com
+ -AddLicenses reseller-account:O365_BUSINESS_ESSENTIALS
+_______________________________________________________
+### check license usage:
+Get-MsolAccountSku
+_______________________________________________________
+
+####Give a user full access to all mailboxes
+
+Get-Mailbox | Add-Mailboxpermission -User user@domain.onmicrosoft.com -AutoMapping:$False -AccessRights FullAccess -InheritanceType All 
+_______________________________________________________
+####give a user sendAs to a mailbox
+Add-RecipientPermission -Identity <mailbox> -AccessRights SendAs -Trustee <SendAsUser>
+_______________________________________________________
+
+#####See All Global Admins on an account
+$role = Get-MsolRole -RoleName "Company Administrator";Get-MsolRoleMember -RoleObjectId $role.ObjectId | sort rolemembertype | select rolemembertype,displayname,emailaddress
+
+####give a single user application impersonation
+
+New-RoleGroup -Name AppImpGroup -Roles ApplicationImpersonation -Members user@domain.com
+
+Add-RoleGroupMember "AppImpGroup" -Member user@domain.com
+_______________________________________________________
+
+########## Bulk edit users pw's (export, add the PW's in the column, save, then import)
+Get-User | select UserPrincipalName,Displayname,password | Export-Csv -Path C:\Users\support\Documents\spreadsheet.csv -NoTypeInformation
+
+Import-csv C:\Users\support\Documents\spreadsheet.csv | foreach {Set-MsolUserPassword -UserPrincipalName $_.userprincipalname -NewPassword $_.password -ForceChangePassword:$False }
+_______________________________________________________
+########## Bulk create new users (export csv, fill in upn,displayname,password, then import)
+
+Get-User | select userprincipalname,displayname,password | Export-Csv -Path C:\Users\support\Documents\spreadsheet.csv -NoTypeInformation
+
+Import-csv C:\Users\support\Documents\spreadsheet.csv | foreach { New-MsolUser -DisplayName $_.displayname -UserPrincipalName $_.userprincipalname -Password $_.password }
+
+_______________________________________________________
+#### see public folders
+
+Get-PublicFolder -Identity \NON_IPM_SUBTREE -Recurse | Format-List Name
+_______________________________________________________
+#### Add aliases for multiple users
+
+Get-User | select UserPrincipalName,Displayname,NewEmailAlias | Export-Csv -Path C:\Users\support\Documents\spreadsheet.csv -NoTypeInformation
+
+---Then fill in column "newemailalias"
+
+Import-CSV C:\Users\support\Documents\spreadsheet.csv | ForEach {Set-Mailbox $_.UserPrincipalName -EmailAddresses @{add=$_.NewEmailAlias}}
+
+----Then check if it worked
+
+Import-CSV C:\Users\support\Documents\spreadsheet.csv | ForEach {Get-Mailbox $_.UserPrincipalName | Format-List Name,EmailAddresses}
+_______________________________________________________
+
+### add aliases for groups
+
+Get-UnifiedGroup | select PrimarySmtpAddress,Displayname,NewEmailAlias | Export-Csv -Path C:\Users\support\Documents\spreadsheet.csv -NoTypeInformation
+
+---Then fill in column "newemailalias"
+
+Import-CSV C:\Users\support\Documents\spreadsheet.csv | ForEach {Set-UnifiedGroup $_.PrimarySmtpAddress -EmailAddresses @{add=$_.NewEmailAlias}}
+
+----Then check if it worked
+
+Import-CSV C:\Users\support\Documents\spreadsheet.csv | ForEach {Get-UnifiedGroup $_.UserPrincipalName | Format-List Name,EmailAddresses}
+_______________________________________________________
+### add aliases for distribution groups
+
+Get-DistributionGroup | select PrimarySmtpAddress,Displayname,NewEmailAlias | Export-Csv -Path C:\Users\support\Documents\spreadsheet.csv -NoTypeInformation
+
+---Then fill in column "newemailalias"
+
+Import-CSV C:\Users\support\Documents\spreadsheet.csv | ForEach {Set-DistributionGroup $_.PrimarySmtpAddress -EmailAddresses @{add=$_.NewEmailAlias}}
+
+----Then check if it worked
+
+Import-CSV C:\Users\support\Documents\spreadsheet.csv | ForEach {Get-DistributionGroup $_.UserPrincipalName | Format-List Name,EmailAddresses}
+
+_______________________________________________________
+
+#See if a domain exists in office 365
+
+function Test-DomainAvailability {
+      param(
+             [Parameter(mandatory=$true)]
+             [string]$DomainName
+       )
+       $descriptions = @{
+              Unknown   = 'Domain does not exist in Office 365/Azure AD'
+              Managed   = 'Domain is verified but not federated'
+              Federated  = 'Domain is verified and federated'
+       }
+      $response = Invoke-WebRequest -Uri "https://login.microsoftonline.com/getuserrealm.srf?login=user@$DomainName&xml=1" -UseBasicParsing
+     if($response -and $response.StatusCode -eq 200) {
+           $namespaceType = ([xml]($response.Content)).RealmInfo.NameSpaceType
+           New-Object PSObject -Property @{
+                    DomainName = $DomainName
+                    NamespaceType = $namespaceType
+                    Details = $descriptions[$namespaceType]
+           } | Select-Object DomainName, NamespaceType, Details
+    } else {
+        Write-Error -Message 'Domain could not be verified. Please check your connectivity to login.microsoftonline.com'
+    }
+}
