@@ -1,11 +1,12 @@
 $handbrakecli = "C:\Program Files\HandBrake\HandBrakeCLI.exe"
+$outfile = "D:\OneDrive\GitHub\Logs\PlexAVIConvert.csv"
 $filelist = Get-ChildItem C:\VideoTest\ -filter *.avi -recurse
 $num = $filelist | measure
 $filecount = $num.count
 
 $i = 0;
 
-$convert = ForEach ($file in $filelist) {
+ForEach ($file in $filelist) {
 	$i++;
     $oldfile = $file.DirectoryName + "\" + $file.BaseName + $file.Extension;
 	$newfile = $file.DirectoryName + "\" + $file.BaseName + ".mp4";
@@ -20,16 +21,25 @@ $convert = ForEach ($file in $filelist) {
 	Write-Host "File $i of $filecount - $progress%"
 	Write-Host -------------------------------------------------------------------------------
 	Write-Host $handbrakecli $arguments
-    Start-Process $handbrakecli $arguments | wait-process
+	wait-process -name HandbrakeCLI -ErrorAction SilentlyContinue
+	Start-Process $handbrakecli $arguments
+	wait-process -name HandbrakeCLI -ErrorAction SilentlyContinue
+	$oldFile,$newfile | Export-CSV -path $outfile -NoTypeInformation –Append	
+	remove-item $oldfile
+	
 }
 
-while (($convert | Select-Object -Expand HasExited) -contains $false) {
-    Start-Sleep -Milliseconds 100
-}
+<#
+Write old file - new file to a text file
+#>
 
 <#
 Keep from running multiple - get process - wait until process dies to start next?
 Use graphics card for handbrake CLI?
 Delete original AVI, MOV, etc
 Start-process loop only spawn one window
+
+if((Get-Process -Name handbrakecli -ErrorAction SilentlyContinue) -eq $null){
+	Write-host HandbrakeNotRunning
+}
 #>
