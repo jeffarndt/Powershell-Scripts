@@ -26,3 +26,10 @@ $convert = ForEach ($file in $filelist) {
 while (($convert | Select-Object -Expand HasExited) -contains $false) {
     Start-Sleep -Milliseconds 100
 }
+
+<#
+Keep from running multiple - get process - wait until process dies to start next?
+Use graphics card for handbrake CLI?
+Delete original AVI, MOV, etc
+Start-process loop only spawn one window
+#>
