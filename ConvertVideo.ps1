@@ -1,7 +1,7 @@
 $handbrakecli = "C:\Program Files\HandBrake\HandBrakeCLI.exe"
 $outfile = "D:\OneDrive\GitHub\Logs\PlexConvert\PlexConvert.csv"
 $processingFile = "D:\OneDrive\GitHub\Logs\PlexConvert\PlexProcessing.csv"
-$deletingfile = "D:\OneDrive\GitHub\Logs\PlexConvert\PlexDelteing.csv"
+$deletingfile = "D:\OneDrive\GitHub\Logs\PlexConvert\PlexDeleting.csv"
 $filelist = Get-ChildItem C:\VideoTest\* -Include *.avi,*.mov,*.mkv -recurse
 #$filelist = Get-ChildItem C:\VideoTest\ -filter *.avi -recurse
 $num = $filelist | measure
