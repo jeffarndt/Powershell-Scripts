@@ -1,5 +1,7 @@
 $handbrakecli = "C:\Program Files\HandBrake\HandBrakeCLI.exe"
-$outfile = "D:\OneDrive\GitHub\Logs\PlexAVIConvert.csv"
+$outfile = "D:\OneDrive\GitHub\Logs\PlexConvert\PlexConvert.csv"
+$processingFile = "D:\OneDrive\GitHub\Logs\PlexConvert\PlexProcessing.csv"
+$deletingfile = "D:\OneDrive\GitHub\Logs\PlexConvert\PlexDelteing.csv"
 $filelist = Get-ChildItem C:\VideoTest\* -Include *.avi,*.mov,*.mkv -recurse
 #$filelist = Get-ChildItem C:\VideoTest\ -filter *.avi -recurse
 $num = $filelist | measure
@@ -25,10 +27,13 @@ ForEach ($file in $filelist) {
 	Write-Host -------------------------------------------------------------------------------
 	#Write-Host $handbrakecli $arguments
 	wait-process -name HandbrakeCLI -ErrorAction SilentlyContinue
+	$oldfile |  Out-File -Filepath $processingFile -NoClobber -Append
 	Start-Process $handbrakecli $arguments
 	$Files | out-file -filepath $outfile -NoClobber -Append
 	wait-process -name HandbrakeCLI -ErrorAction SilentlyContinue
 	remove-item $oldfile
+	$oldfile | Out-File -FilePath $deletingfile -NoClobber -Append
+
 	
 }
 
