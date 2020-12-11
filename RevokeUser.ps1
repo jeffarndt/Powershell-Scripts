@@ -115,6 +115,8 @@ Sign in to Azure AD Powershell with an Admin account $pwd = "Kab32@xeti491$"
 **** https://docs.microsoft.com/en-us/powershell/azure/active-directory/signing-in-service-principal?view=azureadps-2.0
 ***** More on this https://office365itpros.com/2020/08/13/exo-certificate-based-authentication-powershell/
 ****** More https://www.quadrotech-it.com/blog/certificate-based-authentication-for-exchange-online-remote-powershell/ 
+****More reading https://adamtheautomator.com/exchange-online-powershell-mfa/ 
+
 Roles we want to use - Device Administrators -  User Account Administrator
 
 Steps to get AzureAD
